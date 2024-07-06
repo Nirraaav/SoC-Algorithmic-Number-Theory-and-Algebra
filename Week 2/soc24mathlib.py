@@ -1,4 +1,8 @@
 import random
+import sys
+
+# set maximum recursion depth
+sys.setrecursionlimit(100000)
 
 def pair_gcd(a: int, b: int) -> int:
     """
@@ -260,6 +264,20 @@ def phi(n: int) -> int:
         phi -= phi // n
 
     return phi
+
+def log_2(n: int) -> int:
+    """
+    Returns the base 2 logarithm of n.
+
+    Parameters:
+        n (int): The integer whose base 2 logarithm is to be determined.
+
+    Returns:
+        int: The base 2 logarithm of n.
+    """
+    if n == 0:
+        return 0
+    return n.bit_length() - 1
 
 
 def is_quadratic_residue_prime_power(a: int, p: int, e: int) -> int:
@@ -527,15 +545,24 @@ def euler_phi(n: int) -> int:
 
 class QuotientPolynomialRing:
     def __init__(self, poly: list[int], pi_gen: list[int]) -> None:
+        # poly += [0] * (len(pi_gen) - len(poly) - 1)
         self.element = poly
         self.pi_generator = pi_gen
         self._reduce()
 
     def _reduce(self):
         while len(self.element) >= len(self.pi_generator):
-            coeff = self.element.pop()
+            coeff = self.element[-1]
             for i in range(len(self.pi_generator)-1):
-                self.element[-1-i] -= coeff * self.pi_generator[-2-i]
+                self.element[-2-i] -= coeff * self.pi_generator[-2-i]
+            self.element.pop()
+
+    @staticmethod
+    def normalize(poly: list[int]):
+        while poly and poly[-1] == 0:
+            poly.pop()
+        if not poly:
+            poly.append(0)
 
     @staticmethod
     def _mod_polynomial(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -549,6 +576,7 @@ class QuotientPolynomialRing:
         Returns:
             QuotientPolynomialRing: The remainder of poly1 divided by poly2.
         """
+        QuotientPolynomialRing._check_pi_generator(poly1, poly2)
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
         
@@ -560,7 +588,7 @@ class QuotientPolynomialRing:
         return QuotientPolynomialRing(p1_element, poly1.pi_generator)
     
     @staticmethod
-    def _check_pi_generator(poly1, poly2):
+    def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> bool:
         if poly1.pi_generator != poly2.pi_generator:
             raise Exception("Polynomials have different quotienting polynomials.")
 
@@ -643,33 +671,38 @@ class QuotientPolynomialRing:
         p2_element = poly2.element[:]
         
         result_degree = len(p1_element) + len(p2_element) - 1
-        result_element = [0] * (result_degree)
+        result_element = [0] * result_degree
         
         for i in range(len(p1_element)):
             for j in range(len(p2_element)):
                 result_element[i + j] += p1_element[i] * p2_element[j]
-
         
-        for i in range(len(result_element) - 1, len(poly1.pi_generator) - 2, -1):
-            if result_element[i] != 0:
-                for j in range(len(poly1.pi_generator)):
-                    result_element[i - len(poly1.pi_generator) + j + 1] -= (result_element[i]) * poly1.pi_generator[j]
-                result_element[i] = 0
-
-        print(result_element[:len(poly1.pi_generator) - 1])
+        while len(result_element) >= len(poly1.pi_generator):
+            coeff = result_element.pop()
+            for i in range(len(poly1.pi_generator)-1):
+                result_element[-1-i] -= coeff * poly1.pi_generator[-2-i]
         
-        return QuotientPolynomialRing(result_element[:len(poly1.pi_generator) - 1], poly1.pi_generator)    
+        return QuotientPolynomialRing(result_element, poly1.pi_generator)
 
-    # @staticmethod
-    # def Mul(poly1, poly2):
-    #     QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-    #     result_len = len(poly1.element) + len(poly2.element) - 1
-    #     result = [0] * result_len
-    #     for i, a in enumerate(poly1.element):
-    #         for j, b in enumerate(poly2.element):
-    #             result[i + j] += a * b
-    #     return QuotientPolynomialRing(result, poly1.pi_generator)
-    
+    def pow(self, m: int) -> 'QuotientPolynomialRing':
+        """
+        Returns the polynomial raised to the power m modulo pi_generator.
+
+        Parameters:
+            m (int): The exponent.
+
+        Returns:
+            QuotientPolynomialRing: The polynomial raised to the power m modulo pi_generator.
+        """
+        result = QuotientPolynomialRing([1], self.pi_generator)
+        # use fast exponentiation
+        while m > 0:
+            if m % 2 == 1:
+                result = QuotientPolynomialRing.Mul(result, self)
+            self = QuotientPolynomialRing.Mul(self, self)
+            m //= 2
+        return result
+
     @staticmethod
     def GCD(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
@@ -683,57 +716,166 @@ class QuotientPolynomialRing:
             QuotientPolynomialRing: The greatest common divisor of poly1 and poly2 modulo pi_generator.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        p1 = poly1.element[::-1]
-        p2 = poly2.element[::-1]
-        result = polynomial_gcd(p1, p2)[::-1]
-        result += [0]*(len(poly1.pi_generator) - len(result) - 1)
-        result_gcd = gcd(*result)
-        if result_gcd != 1 and result_gcd != 0:
-            result = [x / result_gcd for x in result]
-        # print(QuotientPolynomialRing(result, poly1.pi_generator).element, QuotientPolynomialRing(result, poly1.pi_generator).pi_generator)
-        return QuotientPolynomialRing(result, poly1.pi_generator)
+        p1 = poly1.element[:]
+        p2 = poly2.element[:]
+        if len(p1) < len(p2):
+            p1, p2 = p2, p1
+        elif p1[-1] < p2[-1]:
+            p1, p2 = p2, p1
+        while p2 != [0]:
+            p1, p2 = p2, poly_div(p1, p2)[1]
+            gcd_p1 = gcd(*p1)
+            if gcd_p1 != 0 and gcd_p1 != 1:
+                p1 = [u // gcd_p1 for u in p1]
+            gcd_p2 = gcd(*p2)
+            if gcd_p2 != 0 and gcd_p2 != 1:
+                p2 = [u // gcd_p2 for u in p2]
+        p1 += [0] * (len(poly1.pi_generator) - len(p1) - 1)
+        return QuotientPolynomialRing(p1, poly1.pi_generator)
     
-def polynomial_gcd(p1, p2):
-    """
-    Calculate the GCD of two polynomials p1 and p2.
-    Polynomials are represented as lists of coefficients in ascending order of powers.
-    """
-    def poly_divmod(dividend, divisor):
+    # operator + overloading
+    def __add__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        return QuotientPolynomialRing.Add(self, other)
+    
+    # operator - overloading
+    def __sub__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        return QuotientPolynomialRing.Sub(self, other)
+    
+    # operator * overloading
+    def __mul__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        return QuotientPolynomialRing.Mul(self, other)
+    
+    # operator ** overloading
+    def __pow__(self, m: int) -> 'QuotientPolynomialRing':
+        return self.pow(m)
+    
+    # operator % overloading
+    def __mod__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        return QuotientPolynomialRing._mod_polynomial(self, other)
+    
+    # operator == overloading
+    def __eq__(self, other: 'QuotientPolynomialRing') -> bool:
+        return self.element == other.element and self.pi_generator == other.pi_generator
+    
+    # operator != overloading
+    def __ne__(self, other: 'QuotientPolynomialRing') -> bool:
+        return not (self == other)
+    
+    @staticmethod
+    def from_int(n: int, pi_gen: list[int]) -> 'QuotientPolynomialRing':
         """
-        Perform polynomial division (divmod) of two polynomials.
+        Returns the polynomial representation of an integer n modulo pi_generator.
+
+        Parameters:
+            n (int): The integer.
+            pi_gen (list[int]): The pi_generator.
+
+        Returns:
+            QuotientPolynomialRing: The polynomial representation of n modulo pi_generator.
         """
-        quotient = []
-        remainder = dividend[:]
-        divisor_degree = len(divisor) - 1
-        divisor_lead_coef = divisor[-1]
-
-        while len(remainder) >= len(divisor):
-            lead_coef = remainder[-1] / divisor_lead_coef
-            degree_diff = len(remainder) - len(divisor)
-            quotient = [0] * degree_diff + [lead_coef] + quotient
-            subtract_term = [0] * degree_diff + [coef * lead_coef for coef in divisor]
-            remainder = [coef1 - coef2 for coef1, coef2 in zip(remainder, subtract_term)]
-            while remainder and remainder[-1] == 0:
-                remainder.pop()  # Remove leading zeros
-
-        return quotient, remainder
-
-    def poly_gcd(a, b):
-        while b:
-            _, remainder = poly_divmod(a, b)
-            a, b = b, remainder
-        return a
-
-    # Normalize polynomials to remove leading zeros
-    while p1 and p1[-1] == 0:
-        p1.pop()
-    while p2 and p2[-1] == 0:
-        p2.pop()
-
-    gcd = poly_gcd(p1, p2)
+        return QuotientPolynomialRing([n], pi_gen)
+                                      
     
-    # Normalize GCD to remove leading zeros
-    while gcd and gcd[-1] == 0:
-        gcd.pop()
+
+def normalize(poly: list[int]):
+    while poly and poly[-1] == 0:
+        poly.pop()
+    if not poly:  # This handles the case where the polynomial is empty after normalization
+        poly.append(0)
+
+def poly_div(num: list[int], den: list[int]) -> tuple[list[int], list[int]]:
+    num = num[:]
+    normalize(num)
+    den = den[:]
+    normalize(den)
+
+    if den == [0]:  # Handle the case where the denominator is zero
+        raise Exception("Denominator polynomial cannot be zero")
+
+    if len(num) >= len(den):
+        shift = len(num) - len(den)
+        den = [0] * shift + den
+    else:
+        return [0], num
+
+    quot = []
+    divisor = den[-1]
+    if divisor == 0:
+        raise ValueError("Leading coefficient of the denominator cannot be zero")
+
+    for i in range(shift + 1):
+        mult = num[-1] / divisor
+        quot = [mult] + quot
+        if mult != 0:
+            d = [mult * u for u in den]
+            num = [u - v for u, v in zip(num, d)]
+        num.pop()
+        den.pop(0)
+
+    normalize(num)
+    return quot, num
+
+def aks_test(n: int) -> bool:
+    """
+    Returns True if n is a prime number, and False otherwise using the AKS primality test.
+
+    Parameters:
+        n (int): The integer to be checked.
+
+    Returns:
+        bool: True if n is a prime number, and False otherwise.
+    """
+    if n == 1:
+        return False
+    if n == 2:
+        return True
+    if n == 3:
+        return True
+    if n % 2 == 0:
+        return False
+    if is_perfect_power(n):
+        return False
+
+    def find_r(n):
+        mk = int(log_2(n) ** 2)
+        r = mk
+        while True:
+            if pair_gcd(r, n) == 1:
+                k = 1
+                s = n % r
+                while k <= mk:
+                    s = (s * n) % r
+                    if s == 1:
+                        break
+                    k += 1
+                if k > mk:
+                    return r
+            r += 1
+
+    r = find_r(n)
+
+    for a in range(1, min(r, n)):
+        if (pair_gcd(a, n) > 1):
+            return False
+        
+    if n <= r:
+        return True
     
-    return gcd
+    def check(start, end, n):
+        for a in range(start, end):
+            if pow(a, n, n) != a:
+                return False
+        return True
+    
+    max_a = int(((phi(r)) ** 0.5) * log_2(n))
+    if max_a > n:
+        max_a = n
+    ran = max(1, max_a // 8)
+
+    for i in range(1, max_a + 1, ran):
+        if not check(i, min(i + ran, max_a + 1), n):
+            return False
+
+    return True
+
+
