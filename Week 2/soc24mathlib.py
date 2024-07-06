@@ -1,8 +1,4 @@
 import random
-import sys
-
-# set maximum recursion depth
-sys.setrecursionlimit(100000)
 
 def pair_gcd(a: int, b: int) -> int:
     """
