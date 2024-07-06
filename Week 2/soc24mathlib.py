@@ -63,10 +63,10 @@ def gcd(*args: int) -> int:
         int: The greatest common divisor of the list of integers.
     """
     
-    # if (len(args) == 0):
-    #     return 0
-    # if (len(args) == 1):
-    #     return args[0]
+    if (len(args) == 0):
+        return 0
+    if (len(args) == 1):
+        return args[0]
     if (len(args) == 2):
         return pair_gcd(args[0], args[1])
 
@@ -529,12 +529,40 @@ class QuotientPolynomialRing:
     def __init__(self, poly: list[int], pi_gen: list[int]) -> None:
         self.element = poly
         self.pi_generator = pi_gen
-        for i in range(len(self.element) - 1, len(self.pi_generator) - 1, -1):
-            if self.element[i] != 0:
-                for j in range(len(self.pi_generator)):
-                    self.element[i - len(self.pi_generator) + j] -= self.element[i] * self.pi_generator[j]
-                # self.element[i] = 0
-        self.element = self.element[:len(self.pi_generator) - 1]
+        self._reduce()
+
+    def _reduce(self):
+        while len(self.element) >= len(self.pi_generator):
+            coeff = self.element.pop()
+            for i in range(len(self.pi_generator)-1):
+                self.element[-1-i] -= coeff * self.pi_generator[-2-i]
+
+    @staticmethod
+    def _mod_polynomial(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        """
+        Static method to find the remainder of poly1 divided by poly2.
+
+        Parameters:
+            poly1 (QuotientPolynomialRing): The dividend polynomial.
+            poly2 (QuotientPolynomialRing): The divisor polynomial.
+
+        Returns:
+            QuotientPolynomialRing: The remainder of poly1 divided by poly2.
+        """
+        p1_element = poly1.element[:]
+        p2_element = poly2.element[:]
+        
+        while len(p1_element) >= len(p2_element):
+            coeff = p1_element.pop()
+            for i in range(len(p2_element)-1):
+                p1_element[-1-i] -= coeff * p2_element[-2-i]
+        
+        return QuotientPolynomialRing(p1_element, poly1.pi_generator)
+    
+    @staticmethod
+    def _check_pi_generator(poly1, poly2):
+        if poly1.pi_generator != poly2.pi_generator:
+            raise Exception("Polynomials have different quotienting polynomials.")
 
     @staticmethod
     def Add(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -551,8 +579,7 @@ class QuotientPolynomialRing:
         Raises:
             Exception: If poly1 and poly2 have different pi_generators.
         """
-        if poly1.pi_generator != poly2.pi_generator:
-            raise Exception("The polynomials are not in the same quotient polynomial ring.")
+        QuotientPolynomialRing._check_pi_generator(poly1, poly2)
         
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
@@ -581,8 +608,7 @@ class QuotientPolynomialRing:
         Raises:
             Exception: If poly1 and poly2 have different pi_generators.
         """
-        if poly1.pi_generator != poly2.pi_generator:
-            raise Exception("The polynomials are not in the same quotient polynomial ring.")
+        QuotientPolynomialRing._check_pi_generator(poly1, poly2)
         
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
@@ -596,50 +622,6 @@ class QuotientPolynomialRing:
         
         return QuotientPolynomialRing(result_element, poly1.pi_generator)
     
-    # @staticmethod
-    # def Mul(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
-    #     """
-    #     Static method to multiply two polynomials poly1 and poly2 modulo pi_generator.
-
-    #     Parameters:
-    #         poly1 (QuotientPolynomialRing): The first polynomial.
-    #         poly2 (QuotientPolynomialRing): The second polynomial.
-
-    #     Returns:
-    #         QuotientPolynomialRing: The result of poly1 * poly2 modulo pi_generator.
-
-    #     Raises:
-    #         Exception: If poly1 and poly2 have different pi_generators.
-    #     """
-    #     if poly1.pi_generator != poly2.pi_generator:
-    #         raise Exception("The polynomials are not in the same quotient polynomial ring.")
-        
-    #     p1_element = poly1.element[:]
-    #     p2_element = poly2.element[:]
-        
-    #     result_degree = len(p1_element) + len(p2_element) - 1
-    #     result_element = [0] * (result_degree)
-        
-    #     for i in range(len(p1_element)):
-    #         for j in range(len(p2_element)):
-    #             result_element[i + j] += p1_element[i] * p2_element[j]
-
-    #     # print(poly1.element, poly2.element, result_element)
-    #     print(result_element, poly1.pi_generator)
-        
-    #     for i in range(len(result_element) - 1, len(poly1.pi_generator) - 2, -1):
-    #         if result_element[i] != 0:
-    #             for j in range(len(poly1.pi_generator)):
-    #                 # print(result_element[i] * poly1.pi_generator[j])
-    #                 result_element[i - len(poly1.pi_generator) + j + 1] -= (result_element[i] / poly1.pi_generator[-1]) * poly1.pi_generator[j]
-    #                 print(result_element)
-    #             result_element[i] = 0
-    #             # print(result_element, i)
-        
-    #     print(result_element, poly1.pi_generator)
-        
-    #     return QuotientPolynomialRing(result_element[:len(poly1.pi_generator) - 1], poly1.pi_generator)
-
     @staticmethod
     def Mul(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
@@ -655,117 +637,103 @@ class QuotientPolynomialRing:
         Raises:
             Exception: If poly1 and poly2 have different pi_generators.
         """
-        if poly1.pi_generator != poly2.pi_generator:
-            raise Exception("The polynomials are not in the same quotient polynomial ring.")
+        QuotientPolynomialRing._check_pi_generator(poly1, poly2)
         
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
         
-        result_degree = len(p1_element) + len(p2_element) - 2
-        result_element = [0] * (result_degree + 1)
+        result_degree = len(p1_element) + len(p2_element) - 1
+        result_element = [0] * (result_degree)
         
         for i in range(len(p1_element)):
             for j in range(len(p2_element)):
                 result_element[i + j] += p1_element[i] * p2_element[j]
+
         
-        # Reduce result_element modulo pi_generator
-        result_element = QuotientPolynomialRing.reduce_mod(result_element, poly1.pi_generator)
-        print(result_element)
-        return QuotientPolynomialRing(result_element, poly1.pi_generator)
-    
-    @staticmethod
-    def reduce_mod(result_element: list[int], pi_generator: list[int]) -> list[int]:
-        """
-        Helper method to reduce a polynomial element modulo pi_generator.
-
-        Parameters:
-            result_element (list[int]): The polynomial element to reduce.
-            pi_generator (list[int]): The quotienting polynomial.
-
-        Returns:
-            list[int]: The reduced polynomial element modulo pi_generator.
-        """
-        # Perform modulo operation with pi_generator manually
-        for i in range(len(result_element) - 1, len(pi_generator) - 1, -1):
+        for i in range(len(result_element) - 1, len(poly1.pi_generator) - 2, -1):
             if result_element[i] != 0:
-                for j in range(len(pi_generator)):
-                    result_element[i - len(pi_generator) + j] -= result_element[i] * pi_generator[j]
+                for j in range(len(poly1.pi_generator)):
+                    result_element[i - len(poly1.pi_generator) + j + 1] -= (result_element[i]) * poly1.pi_generator[j]
+                result_element[i] = 0
+
+        print(result_element[:len(poly1.pi_generator) - 1])
         
-        return result_element[:len(pi_generator) - 1]
+        return QuotientPolynomialRing(result_element[:len(poly1.pi_generator) - 1], poly1.pi_generator)    
+
+    # @staticmethod
+    # def Mul(poly1, poly2):
+    #     QuotientPolynomialRing._check_pi_generator(poly1, poly2)
+    #     result_len = len(poly1.element) + len(poly2.element) - 1
+    #     result = [0] * result_len
+    #     for i, a in enumerate(poly1.element):
+    #         for j, b in enumerate(poly2.element):
+    #             result[i + j] += a * b
+    #     return QuotientPolynomialRing(result, poly1.pi_generator)
     
     @staticmethod
     def GCD(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
-        Static method to compute the GCD of two polynomials poly1 and poly2 modulo pi_generator.
+        Returns the greatest common divisor of two polynomials poly1 and poly2 modulo pi_generator.
 
         Parameters:
             poly1 (QuotientPolynomialRing): The first polynomial.
             poly2 (QuotientPolynomialRing): The second polynomial.
 
         Returns:
-            QuotientPolynomialRing: The GCD of poly1 and poly2 modulo pi_generator.
-
-        Raises:
-            Exception: If poly1 and poly2 have different pi_generators.
+            QuotientPolynomialRing: The greatest common divisor of poly1 and poly2 modulo pi_generator.
         """
-        if poly1.pi_generator != poly2.pi_generator:
-            raise Exception("The polynomials are not in the same quotient polynomial ring.")
-        
-        # Euclidean algorithm for polynomials
-        a = poly1.element[:]
-        b = poly2.element[:]
-        
-        while QuotientPolynomialRing.degree(b) != -1:
-            remainder = QuotientPolynomialRing.Mod(a, b, poly1.pi_generator)
-            a = b[:]
-            b = remainder[:]
-        
-        # Normalize the leading coefficient of the GCD polynomial to 1
-        if a != [0]:
-            leading_coefficient = a[QuotientPolynomialRing.degree(a)]
-            for i in range(len(a)):
-                a[i] //= leading_coefficient
-        
-        return QuotientPolynomialRing(a, poly1.pi_generator)
+        QuotientPolynomialRing._check_pi_generator(poly1, poly2)
+        p1 = poly1.element[::-1]
+        p2 = poly2.element[::-1]
+        result = polynomial_gcd(p1, p2)[::-1]
+        result += [0]*(len(poly1.pi_generator) - len(result) - 1)
+        result_gcd = gcd(*result)
+        if result_gcd != 1 and result_gcd != 0:
+            result = [x / result_gcd for x in result]
+        # print(QuotientPolynomialRing(result, poly1.pi_generator).element, QuotientPolynomialRing(result, poly1.pi_generator).pi_generator)
+        return QuotientPolynomialRing(result, poly1.pi_generator)
     
-    @staticmethod
-    def degree(poly: list[int]) -> int:
+def polynomial_gcd(p1, p2):
+    """
+    Calculate the GCD of two polynomials p1 and p2.
+    Polynomials are represented as lists of coefficients in ascending order of powers.
+    """
+    def poly_divmod(dividend, divisor):
         """
-        Helper method to find the degree of a polynomial.
-
-        Parameters:
-            poly (list[int]): The polynomial represented as a list of coefficients.
-
-        Returns:
-            int: The degree of the polynomial, or -1 if the polynomial is zero.
+        Perform polynomial division (divmod) of two polynomials.
         """
-        degree = len(poly) - 1
-        while degree >= 0 and poly[degree] == 0:
-            degree -= 1
-        return degree
-    
-    @staticmethod
-    def Mod(a: list[int], b: list[int], pi_generator: list[int]) -> list[int]:
-        """
-        Helper method to perform polynomial division and find the remainder modulo pi_generator.
+        quotient = []
+        remainder = dividend[:]
+        divisor_degree = len(divisor) - 1
+        divisor_lead_coef = divisor[-1]
 
-        Parameters:
-            a (list[int]): The dividend polynomial.
-            b (list[int]): The divisor polynomial.
-            pi_generator (list[int]): The quotienting polynomial.
+        while len(remainder) >= len(divisor):
+            lead_coef = remainder[-1] / divisor_lead_coef
+            degree_diff = len(remainder) - len(divisor)
+            quotient = [0] * degree_diff + [lead_coef] + quotient
+            subtract_term = [0] * degree_diff + [coef * lead_coef for coef in divisor]
+            remainder = [coef1 - coef2 for coef1, coef2 in zip(remainder, subtract_term)]
+            while remainder and remainder[-1] == 0:
+                remainder.pop()  # Remove leading zeros
 
-        Returns:
-            list[int]: The remainder polynomial after dividing a by b modulo pi_generator.
-        """
-        degree_a = QuotientPolynomialRing.degree(a)
-        degree_b = QuotientPolynomialRing.degree(b)
-        
-        while degree_a >= degree_b and degree_a != -1:
-            factor = [0] * (degree_a - degree_b + 1)
-            factor[-1] = a[degree_a] // b[degree_b]
-            
-            a = QuotientPolynomialRing.Sub(a, QuotientPolynomialRing.Mul(factor, b))
-            
-            degree_a = QuotientPolynomialRing.degree(a)
-        
+        return quotient, remainder
+
+    def poly_gcd(a, b):
+        while b:
+            _, remainder = poly_divmod(a, b)
+            a, b = b, remainder
         return a
+
+    # Normalize polynomials to remove leading zeros
+    while p1 and p1[-1] == 0:
+        p1.pop()
+    while p2 and p2[-1] == 0:
+        p2.pop()
+
+    gcd = poly_gcd(p1, p2)
+    
+    # Normalize GCD to remove leading zeros
+    while gcd and gcd[-1] == 0:
+        gcd.pop()
+    
+    return gcd
