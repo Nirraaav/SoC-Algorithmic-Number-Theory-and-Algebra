@@ -543,10 +543,9 @@ def euler_phi(n: int) -> int:
 
 class QuotientPolynomialRing:
     def __init__(self, poly: list[int], pi_gen: list[int]) -> None:
-        # poly += [0] * (len(pi_gen) - len(poly) - 1)
-        self.element = poly
-        self.pi_generator = pi_gen
-        self._reduce()
+        self.element = poly[:]  # Make a copy of poly
+        self.pi_generator = pi_gen[:]  # Make a copy of pi_gen
+        self._reduce()  # Reduce the polynomial
 
     def _reduce(self):
         while len(self.element) >= len(self.pi_generator):
@@ -580,10 +579,11 @@ class QuotientPolynomialRing:
         p2_element = poly2.element[:]
 
         while len(p1_element) >= len(p2_element):
-            # Compute the leading coefficient ratio
+            if p2_element[-1] == 0:
+                break  # Avoid division by zero
+            
             coeff = p1_element[-1] / p2_element[-1]
 
-            # Subtract coeff * poly2 from poly1
             for i in range(len(p2_element)):
                 p1_element[-1-i] -= coeff * p2_element[-1-i]
 
@@ -698,7 +698,8 @@ class QuotientPolynomialRing:
         """
         Returns the polynomial raised to the power m modulo pi_generator.
 
-        Parameters:
+        Parameters:if p2_element[-1] == 0:
+            break  # Avoid division by zero
             m (int): The exponent.
 
         Returns:
@@ -739,8 +740,42 @@ class QuotientPolynomialRing:
         
         poly1.element += [0] * (len(poly1.pi_generator) - len(poly1.element) - 1)
         return poly1
-                                      
     
+    @staticmethod
+    def Inv(poly: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
+        """
+        Static method to find the multiplicative inverse of a polynomial poly modulo pi_generator.
+
+        Parameters:
+            poly (QuotientPolynomialRing): The polynomial.
+
+        Returns:
+            QuotientPolynomialRing: The multiplicative inverse of poly modulo pi_generator.
+
+        Raises:
+            Exception: If poly is not invertible.
+        """
+        if poly.element == [0]:
+            raise Exception("The polynomial is not invertible.")
+        
+        # Initialize variables for the extended Euclidean algorithm
+        a, b = poly, QuotientPolynomialRing(poly.pi_generator, poly.pi_generator)
+        s, t = QuotientPolynomialRing([1], poly.pi_generator), QuotientPolynomialRing([0], poly.pi_generator)
+        
+        while b.element != [0]:
+            q = QuotientPolynomialRing._mod_polynomial(a, b)
+            a, b = b, QuotientPolynomialRing.Sub(s, QuotientPolynomialRing.Mul(q, t))
+            s, t = t, s
+        
+        # Ensure the inverse exists and is normalized
+        if a.element != [1]:
+            raise Exception("The polynomial is not invertible.")
+        
+        # Normalize the resulting inverse polynomial
+        QuotientPolynomialRing.normalize(s.element)
+        s.element += [0] * (len(s.pi_generator) - len(s.element) - 1)
+        
+        return QuotientPolynomialRing(s.element, poly.pi_generator)
 
 def normalize(poly: list[int]):
     while poly and poly[-1] == 0:
