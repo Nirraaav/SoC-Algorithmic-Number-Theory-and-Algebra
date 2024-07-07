@@ -1,5 +1,7 @@
 import random
 
+EPSILON = 1e-6
+
 def pair_gcd(a: int, b: int) -> int:
     """
     Returns the greatest common divisor of two integers a and b.
@@ -563,7 +565,7 @@ class QuotientPolynomialRing:
     @staticmethod
     def _mod_polynomial(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
-        Static method to find the remainder of poly1 divided by poly2.
+        Static method to find the remainder of poly1 divided by poly2 modulo pi_generator.
 
         Parameters:
             poly1 (QuotientPolynomialRing): The dividend polynomial.
@@ -573,15 +575,27 @@ class QuotientPolynomialRing:
             QuotientPolynomialRing: The remainder of poly1 divided by poly2.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
+
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
-        
+
         while len(p1_element) >= len(p2_element):
-            coeff = p1_element.pop()
-            for i in range(len(p2_element)-1):
-                p1_element[-1-i] -= coeff * p2_element[-2-i]
-        
+            # Compute the leading coefficient ratio
+            coeff = p1_element[-1] / p2_element[-1]
+
+            # Subtract coeff * poly2 from poly1
+            for i in range(len(p2_element)):
+                p1_element[-1-i] -= coeff * p2_element[-1-i]
+
+            # Remove trailing zeros
+            while p1_element and p1_element[-1] == 0:
+                p1_element.pop()
+
+        # Normalize the resulting polynomial
+        QuotientPolynomialRing.normalize(p1_element)
+
         return QuotientPolynomialRing(p1_element, poly1.pi_generator)
+
     
     @staticmethod
     def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> bool:
@@ -702,7 +716,7 @@ class QuotientPolynomialRing:
     @staticmethod
     def GCD(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
-        Returns the greatest common divisor of two polynomials poly1 and poly2 modulo pi_generator.
+        Static method to find the greatest common divisor of two polynomials poly1 and poly2 modulo pi_generator.
 
         Parameters:
             poly1 (QuotientPolynomialRing): The first polynomial.
@@ -710,66 +724,21 @@ class QuotientPolynomialRing:
 
         Returns:
             QuotientPolynomialRing: The greatest common divisor of poly1 and poly2 modulo pi_generator.
+
+        Raises:
+            Exception: If poly1 and poly2 have different pi_generators.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        p1 = poly1.element[:]
-        p2 = poly2.element[:]
-        if len(p1) < len(p2):
-            p1, p2 = p2, p1
-        elif p1[-1] < p2[-1]:
-            p1, p2 = p2, p1
-        while p2 != [0]:
-            p1, p2 = p2, poly_div(p1, p2)[1]
-            gcd_p1 = gcd(*p1)
-            if gcd_p1 != 0 and gcd_p1 != 1:
-                p1 = [u // gcd_p1 for u in p1]
-            gcd_p2 = gcd(*p2)
-            if gcd_p2 != 0 and gcd_p2 != 1:
-                p2 = [u // gcd_p2 for u in p2]
-        p1 += [0] * (len(poly1.pi_generator) - len(p1) - 1)
-        return QuotientPolynomialRing(p1, poly1.pi_generator)
-    
-    # operator + overloading
-    def __add__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
-        return QuotientPolynomialRing.Add(self, other)
-    
-    # operator - overloading
-    def __sub__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
-        return QuotientPolynomialRing.Sub(self, other)
-    
-    # operator * overloading
-    def __mul__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
-        return QuotientPolynomialRing.Mul(self, other)
-    
-    # operator ** overloading
-    def __pow__(self, m: int) -> 'QuotientPolynomialRing':
-        return self.pow(m)
-    
-    # operator % overloading
-    def __mod__(self, other: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
-        return QuotientPolynomialRing._mod_polynomial(self, other)
-    
-    # operator == overloading
-    def __eq__(self, other: 'QuotientPolynomialRing') -> bool:
-        return self.element == other.element and self.pi_generator == other.pi_generator
-    
-    # operator != overloading
-    def __ne__(self, other: 'QuotientPolynomialRing') -> bool:
-        return not (self == other)
-    
-    @staticmethod
-    def from_int(n: int, pi_gen: list[int]) -> 'QuotientPolynomialRing':
-        """
-        Returns the polynomial representation of an integer n modulo pi_generator.
-
-        Parameters:
-            n (int): The integer.
-            pi_gen (list[int]): The pi_generator.
-
-        Returns:
-            QuotientPolynomialRing: The polynomial representation of n modulo pi_generator.
-        """
-        return QuotientPolynomialRing([n], pi_gen)
+        
+        while poly2.element != [0]:
+            poly1, poly2 = poly2, QuotientPolynomialRing._mod_polynomial(poly1, poly2)
+            poly2.element = [int(u*1000000)/1000000 for u in poly2.element]
+            gcd_poly2 = gcd(*poly2.element)
+            if gcd_poly2 != 1 and gcd_poly2 != 0:
+                poly2.element = [u // gcd_poly2 for u in poly2.element]
+        
+        poly1.element += [0] * (len(poly1.pi_generator) - len(poly1.element) - 1)
+        return poly1
                                       
     
 
