@@ -51,8 +51,22 @@ def pair_egcd(a: int, b: int) -> tuple[int, int, int]:
         a, s, t, b, s_dash, t_dash = b, s_dash, t_dash, r, s - s_dash * q, t - t_dash * q
 
     if swap:
-        return t, s, a
-    return s, t, a    
+        return (t, s, a) if a > 0 else (-t, -s, -a)
+    return (s, t, a) if a > 0 else (-s, -t, -a)
+
+def mod_inverse(a, n):
+    """
+    Find the modular inverse of a (mod n)
+
+    Parameters:
+        a (int) : The number to find the modular inverse of
+        n (int) : The modulo
+
+    Returns:
+        int : The modular inverse of a (mod n) if it exists, otherwise None
+    """
+    u, v, g = pair_egcd(a, n)
+    return None if g > 1 else u % n
 
 def gcd(*args: int) -> int:
     """
@@ -1033,7 +1047,7 @@ def jacobi_symbol(a: int, n: int) -> int:
 
     assert False        
 
-def modular_sqrt_prime(x: int, p: int) -> int:
+def modular_sqrt_prime(a: int, p: int) -> int:
     """
     Returns the modular square root of x modulo p. Assume p is prime.
 
@@ -1044,51 +1058,122 @@ def modular_sqrt_prime(x: int, p: int) -> int:
     Returns:
         int: The modular square root of x modulo p.
     """
-    x = x % p
+    a %= p
+    if jacobi_symbol(a, p) != 1:
+        return None
+    if p % 8 in (3, 7):
+        pow(a, (p + 1) // 4, p)
+    elif p % 8 == 5:
+        x = pow(a, (p + 3) // 8, p)
+        c = (x * x) % p
+        if c != a % p:
+            x *= pow(2, (p - 1) //4, p)
+        return min(-x % p, x % p)
 
-    if legendre_symbol(x, p) != 1:
-        return Exception("No square root exists")
-    elif x == 0:
-        return 0
-    
-    q = p - 1
-    s = 0
-    while q % 2 == 0:
-        q //= 2
+    d = 2
+    while jacobi_symbol(d, p) != -1:
+        d += 1
+
+    s, t = 0, p - 1
+    while not t % 2:
+        t //= 2
         s += 1
-    if s == 1:
-        res = pow(x, (p + 1) // 4, p)
-        if res < p // 2:
-            return res
+
+    at, dt, m = pow(a, t, p), pow(d, t, p), 0
+    for i in range(s):
+        if pow(at * pow_without_mod(dt, m), pow_without_mod(2, s - 1 - i), p) == (p - 1):
+            m += pow_without_mod(2, i)
+    x = pow(a, (t + 1) // 2, p) * pow(dt, m // 2, p)
+    return min(-x % p, x % p)
+
+def hensel_lift_2(a: int, e: int) -> tuple[int]:
+    """
+    Hensel root lifting for powers of two
+
+    Return a tuple giving the roots s such
+    that s ** 2 == a mod (2 ** e)
+
+    Parameters:
+        a (int): The integer.
+        e (int): The power of two.
+    
+    Returns:
+        tuple[int]: The roots s such that s ** 2 == a mod (2 ** e).
+    """
+    if e == 1:
+        return 1,
+    elif e == 2 and a % 4 == 1:
+        return 1, 3
+    elif e == 2 or a % 8 != 1:
+        return None
+    tpk, ss = 4, {1, 3, 5, 7}
+    for k in range(4, e + 1):
+        sr = set()
+        tpk *= 2
+        for r in ss:
+            t = ((r * r - a) // tpk) % 2
+            rr = r + t * tpk // 2
+            sr |= {rr, 2 * tpk - rr}
+        ss = sr
+    return tuple(sorted(ss))
+
+def hensel_lift(r: int, a:int, p: int, e: int) -> tuple[int]:
+    """
+    Hensel root lifting for powers of odd primes
+
+    Given the root r such that r ** 2 == a mod p, return a tuple
+    giving the two roots s such that s ** 2 == a mod (p ** e)
+
+    Parameters:
+        r (int): The root.
+        a (int): The integer.
+        p (int): The prime.
+        e (int): The power.
+
+    Returns:
+        tuple[int]: The two roots s such that s ** 2 == a mod (p ** e).
+    """
+    for n in range(e - 1):
+        r += (a - r * r) * mod_inverse(2 * r, p)
+    t = p ** e
+    return tuple(sorted((r % t, t - r % t)))
+
+def sqrt_mod_pn(a: int, p: int, n: int) -> tuple[tuple[int], int]:
+    """
+    Returns the square roots of a modulo p^n, if they exist.
+
+    Parameters:
+        a (int): The integer.
+        p (int): The prime.
+        n (int): The power.
+
+    Returns:
+        tuple[tuple[int], int]: The square roots of a modulo p^n, if they exist, and the exponent.
+    """
+    ret = None, None
+    if a % p:
+        if p == 2:
+            ret = hensel_lift_2(a, n), n
         else:
-            return p - res
-    for z in range(2, p):
-        if p - 1 == legendre_symbol(z, p):
-            break
-    c = pow(z, q, p)
-    r = pow(x, (q + 1) // 2, p)
-    t = pow(x, q, p)
-    m = s
-    t2 = 0
-    while (t - 1) % p != 0:
-        t2 = (t * t) % p
-        for i in range(1, m):
-            if (t2 - 1) % p == 0:
-                break
-            t2 = (t2 * t2) % p
-        b = pow(c, 2 * (m - i - 1), p)
-        r = (r * b) % p
-        c = (b * b) % p
-        t = (t * c) % p
-        m = i
-    if r < p // 2:
-        return r
+            r = modular_sqrt_prime(a, p)
+            if r:
+                ret = hensel_lift(r, a, p, n), n
     else:
-        return p - r
+        if a % (p ** n) == 0:
+            ret = (0,), (n + 1) // 2
+        else:
+            aa, m = a, 0
+            while aa % p == 0:
+                aa, m = aa // p, m + 1
+            if m % 2 == 0:
+                r, e = sqrt_mod_pn(aa, p, n - m)
+                if r:
+                    ret = tuple(x * p ** (m // 2) for x in r), e + m // 2
+    return ret
     
 def modular_sqrt_prime_power(x: int, p: int, e: int) -> int:
     """
-    Returns the modular square root of x modulo p^e, using Hensel Lifting. Assume p is prime.
+    Returns the modular square root of x modulo p^e.
 
     Parameters:
         x (int): The integer.
@@ -1098,59 +1183,94 @@ def modular_sqrt_prime_power(x: int, p: int, e: int) -> int:
     Returns:
         int: The modular square root of x modulo p^e.
     """
-    print(x, p, e, modular_sqrt_prime(x, pow_without_mod(p, e)))
-    return modular_sqrt_prime(x, pow_without_mod(p, e))
+    return sorted(sqrt_mod_pn(x, p, e)[0])[0]
 
-    # a = modular_sqrt_prime(x, p)
+def itertools_product(*args):
+    """
+    Returns the Cartesian product of the input iterables.
 
-    # if e == 1:
-    #     return a
+    Parameters:
+        *args: The input iterables.
+
+    Returns:
+        list[tuple]: The Cartesian product of the input iterables.
+    """
+    pools = [tuple(pool) for pool in args]
+    result = [[]]
+    for pool in pools:
+        result = [x + [y] for x in result for y in pool]
+    return result
+
+def sqrt_mod_m(a: int, m: int) -> tuple[int]:
+    """
+    Returns the square roots of a modulo m.
+
+    Parameters:
+        a (int): The integer.
+        m (int): The modulo.
+
+    Returns:
+        tuple[int]: The square roots of a modulo m.
+    """
+    if m < 2:
+        return (a % m if m else m,)
+
+    rm, roots = 1, []
+    for p, e in factor(m):
+        r, ee = sqrt_mod_pn(a, p, e)
+        if r:
+            t = p ** ee
+            rm *= t
+            roots.append([(x, t) for x in r])
+        else:
+            return ()
+
+    if roots:
+        rx = [crt(*zip(*pr)) for pr in itertools_product(*roots)]
+        return tuple(sorted(x + y for x in rx for y in range(0, m, rm)))
+    else:
+        return ()
+
+def modular_sqrt(x: int, n: int) -> int:
+    """
+    Returns the modular square root of x modulo n.
+
+    Parameters:
+        x (int): The integer.
+        n (int): The modulo.
+
+    Returns:
+        int: The modular square root of x modulo n.
+    """
+    if len(sqrt_mod_m(x, n)) == 0:
+        return Exception("No square root exists")
+    else:
+        return sorted(sqrt_mod_m(x, n))[0]
     
-    # def hensel_lift(a, p, e, b):
-    #     """
-    #     Perform Hensel lifting to find a square root of a modulo p^e.
+def is_smooth(m: int, y: int) -> bool:
+    """
+    Returns true if m is y-smooth.
 
-    #     Parameters:
-    #     a (int): The integer whose square root we want to find.
-    #     p (int): The odd prime.
-    #     e (int): The exponent.
-    #     b (int): The initial square root of a modulo p (i.e., b^2 ≡ a (mod p)).
+    Parameters:
+        m (int): The integer.
+        y (int): The smoothness bound.
 
-    #     Returns:
-    #     int: A square root of a modulo p^e.
-    #     """
-    #     # Start with the initial square root mod p
-    #     c = b
+    Returns:
+        bool: True if m is y-smooth.
+    """
+    return max(prime_factors_only(m)) <= y
 
-    #     # Iterate from f = 1 to e-1
-    #     for f in range(1, e):
-    #         pf = p ** f
-    #         pf1 = p ** (f + 1)
-            
-    #         # Calculate the residual (a - c^2) mod p^(f+1)
-    #         r = (a - c * c) % pf1
-            
-    #         # Calculate h, the solution to 2c * h ≡ r / p^f (mod p)
-    #         # Here, we solve the congruence 2c * h ≡ r (mod p) by multiplying r by the modular inverse of 2c mod p
-    #         h = (r * pow(2 * c, -1, p)) % p
-            
-    #         # Update c = c + p^f * h
-    #         c = (c + h * pf) % pf1
-        
-    #     return c
+def probabilistic_dlog(x: int, g: int, p: int) -> int:
+    """
+    Returns the discrete logarithm of x to the base g in (Z_p)^* using a probabilistic algorithm.
+
+    Parameters:
+        x (int): The integer whose discrete logarithm is to be found.
+        g (int): The base.
+        p (int): The modulo.
+
+    Returns:
+        int: The discrete logarithm of x to the base g in (Z_p)^*.
+    """
     
-    # print(hensel_lift(x, p, e, a))
-    # return hensel_lift(x, p, e, a)
-
-
-# def probabilistic_factor(n: int) -> list[tuple[int, int]]:
-#     """
-#     Returns factorization of n using a sub-exponential probabalistic algorithm (Pollard's rho algorithm).
-
-#     Parameters:
-#         n (int): The integer to be factorized.
-
-#     Returns:
-#         list[tuple[int, int]]: The factorization of n.
-#     """
-
+    
