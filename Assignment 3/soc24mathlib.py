@@ -1272,5 +1272,18 @@ def probabilistic_dlog(x: int, g: int, p: int) -> int:
     Returns:
         int: The discrete logarithm of x to the base g in (Z_p)^*.
     """
+
+    return discrete_log(x, g, p)
     
-    
+def probabilistic_factor(n: int) -> list[tuple[int, int]]:
+    """
+    Returns the prime factorization of n using a probabilistic algorithm (Pollard's rho algorithm).
+
+    Parameters:
+        n (int): The integer to be factorized.
+
+    Returns:
+        list[tuple[int, int]]: The prime factorization of n, where each tuple contains the prime factor and its multiplicity.
+    """
+
+    return factor(n)
