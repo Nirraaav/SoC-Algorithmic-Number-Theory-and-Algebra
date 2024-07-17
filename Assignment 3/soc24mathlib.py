@@ -1,7 +1,5 @@
 import random
 
-EPSILON = 1e-6
-
 def pair_gcd(a: int, b: int) -> int:
     """
     Returns the greatest common divisor of two integers a and b.
