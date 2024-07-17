@@ -1273,7 +1273,7 @@ def probabilistic_dlog(x: int, g: int, p: int) -> int:
         int: The discrete logarithm of x to the base g in (Z_p)^*.
     """
 
-    return discrete_log(x, g, p)
+    # return discrete_log(x, g, p)
     
 def probabilistic_factor(n: int) -> list[tuple[int, int]]:
     """
@@ -1286,4 +1286,46 @@ def probabilistic_factor(n: int) -> list[tuple[int, int]]:
         list[tuple[int, int]]: The prime factorization of n, where each tuple contains the prime factor and its multiplicity.
     """
 
-    return factor(n)
+    def pollards_rho(n):
+        if is_prime(n):
+            return n
+        if n == 1:
+            return 1
+        if n % 2 == 0:
+            return 2
+
+        x = y = random.randint(2, n - 2)
+        c = random.randint(1, 20)
+        d = 1
+
+        while d == 1:
+            x = ((x * x) % n + c) % n
+            y = ((y * y) % n + c) % n
+            y = ((y * y) % n + c) % n
+            d = pair_gcd(abs(x - y), n)
+
+            if d == n:
+                return pollards_rho(n)
+        return d
+
+    factors = []
+    def factorize(n):
+        if n <= 1:
+            return
+        if is_prime(n):
+            factors.append(n)
+            return
+        divisor = pollards_rho(n)
+        factorize(divisor)
+        factorize(n // divisor)
+
+    factorize(n)
+
+    factor_counts = {}
+    for factor in factors:
+        if factor in factor_counts:
+            factor_counts[factor] += 1
+        else:
+            factor_counts[factor] = 1
+
+    return sorted(factor_counts.items())
