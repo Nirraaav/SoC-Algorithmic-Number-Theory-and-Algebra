@@ -246,6 +246,8 @@ def is_quadratic_residue_prime(a: int, p: int) -> int:
         return 1
     if pow(a, (p - 1) // 2, p) == p - 1 or pow(a, (p - 1) // 2, p) == -1:
         return -1
+    
+    return random.choice([1, -1, 0])
 
 def phi(n: int) -> int:
     """
@@ -1271,7 +1273,26 @@ def probabilistic_dlog(x: int, g: int, p: int) -> int:
         int: The discrete logarithm of x to the base g in (Z_p)^*.
     """
 
-    return discrete_log(x, g, p)
+    # return discrete_log(x, g, p) - Nilabha if you read this, will you go to Salsa Night with me? Send me a message on WhatsApp if you see this
+
+    m = floor_sqrt(p) + 1
+
+    hash_table = {}
+    
+    for j in range(m):
+        value = pow(g, j, p)
+        hash_table[value] = j
+    
+    g_inv_m = pow(g, p - m - 1, p)
+    
+    for i in range(m):
+        value = (x * pow(g_inv_m, i, p)) % p
+        if value in hash_table:
+            j = hash_table[value]
+            return (j + i * m) % (p - 1)
+
+    return -1
+
 
 def probabilistic_factor(n: int) -> list[tuple[int, int]]:
     """
@@ -1284,7 +1305,16 @@ def probabilistic_factor(n: int) -> list[tuple[int, int]]:
         list[tuple[int, int]]: The prime factorization of n, where each tuple contains the prime factor and its multiplicity.
     """
 
-    def pollards_rho(n):
+    def pollards_rho(n: int) -> int:
+        """
+        Returns a non-trivial factor of n using Pollard's rho algorithm.
+
+        Parameters:
+            n (int): The integer to be factorized.
+
+        Returns:
+            int: A non-trivial factor of n.
+        """
         if is_prime(n):
             return n
         if n == 1:
@@ -1307,7 +1337,16 @@ def probabilistic_factor(n: int) -> list[tuple[int, int]]:
         return d
 
     factors = []
-    def factorize(n):
+    def factorize(n: int) -> None:
+        """
+        Returns the prime factorization of n.
+
+        Parameters:
+            n (int): The integer to be factorized.
+
+        Returns:
+            
+        """
         if n <= 1:
             return
         if is_prime(n):

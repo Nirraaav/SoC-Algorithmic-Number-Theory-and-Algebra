@@ -4,9 +4,9 @@ import random
 import soc24mathlib
 
 while True:
-    a = random.randint(1, 100000000)
+    a = random.randint(1, 1000000000000000)
     while a % 2 == 0:
-        a = random.randint(1, 100000000)
+        a = random.randint(1, 1000000000000000)
 
     # p = soc24mathlib.gen_prime(1000000000000)
     # while p % 4 == 3:
@@ -24,10 +24,12 @@ while True:
     # except ValueError:
     #     print(f"No square root exists for a = {a} modulo p = {p}")
 
-    try:
-        moda = soc24mathlib.mod_inv(a, b)
-        moda1 = soc24mathlib.mod_inverse(a, b)
-        print(moda, moda1, a, b)
-        assert moda == moda1
-    except:
-        pass
+    # try:
+    #     moda = soc24mathlib.mod_inv(a, b)
+    #     moda1 = soc24mathlib.mod_inverse(a, b)
+    #     print(moda, moda1, a, b)
+    #     assert moda == moda1
+    # except:
+    #     pass
+    print(a, soc24mathlib.factor(a))
+    assert(soc24mathlib.factor(a) == soc24mathlib.probabilistic_factor(a))
