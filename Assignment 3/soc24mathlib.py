@@ -1,4 +1,6 @@
 import random
+from fractions import Fraction
+from typing import List, Tuple
 
 def pair_gcd(a: int, b: int) -> int:
     """
@@ -67,6 +69,30 @@ def mod_inverse(a, n):
     return None if g > 1 else u % n
 
 def gcd(*args: int) -> int:
+    """
+    Returns the greatest common divisor of a list of integers.
+
+    Parameters:
+        args (int): A list of integers.
+
+    Returns:
+        int: The greatest common divisor of the list of integers.
+    """
+    
+    if (len(args) == 0):
+        return 0
+    if (len(args) == 1):
+        return args[0]
+    if (len(args) == 2):
+        return pair_gcd(args[0], args[1])
+
+    g = pair_gcd(args[0], args[1])
+    for i in range(2, len(args)):
+        g = pair_gcd(g, args[i])
+
+    return g
+
+def gcd_no_limit(*args: int) -> int:
     """
     Returns the greatest common divisor of a list of integers.
 
@@ -553,27 +579,25 @@ def euler_phi(n: int) -> int:
         phi *= (i[0] - 1) * i[0] ** (i[1] - 1)
     return phi
 
-# define a class QuotientPolynomialRing
-
 class QuotientPolynomialRing:
-    def __init__(self, poly: list[int], pi_gen: list[int]) -> None:
-        self.element = poly[:]  # Make a copy of poly
-        self.pi_generator = pi_gen[:]  # Make a copy of pi_gen
+    def __init__(self, poly: List[int], pi_gen: List[int]) -> None:
+        self.element = [Fraction(c) for c in poly]  # Convert coefficients to Fractions
+        self.pi_generator = [Fraction(c) for c in pi_gen]  # Convert pi_generator to Fractions
         self._reduce()  # Reduce the polynomial
 
-    def _reduce(self):
+    def _reduce(self) -> None:
         while len(self.element) >= len(self.pi_generator):
             coeff = self.element[-1]
-            for i in range(len(self.pi_generator)-1):
+            for i in range(len(self.pi_generator) - 1):
                 self.element[-2-i] -= coeff * self.pi_generator[-2-i]
             self.element.pop()
 
     @staticmethod
-    def normalize(poly: list[int]):
-        while poly and poly[-1] == 0:
+    def normalize(poly: List[Fraction]) -> None:
+        while poly and poly[-1] == Fraction(0):
             poly.pop()
         if not poly:
-            poly.append(0)
+            poly.append(Fraction(0))
 
     @staticmethod
     def _mod_polynomial(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -593,26 +617,25 @@ class QuotientPolynomialRing:
         p2_element = poly2.element[:]
 
         while len(p1_element) >= len(p2_element):
-            if p2_element[-1] == 0:
+            if p2_element[-1] == Fraction(0):
                 break  # Avoid division by zero
-            
+
             coeff = p1_element[-1] / p2_element[-1]
 
             for i in range(len(p2_element)):
                 p1_element[-1-i] -= coeff * p2_element[-1-i]
 
             # Remove trailing zeros
-            while p1_element and p1_element[-1] == 0:
+            while p1_element and p1_element[-1] == Fraction(0):
                 p1_element.pop()
 
         # Normalize the resulting polynomial
         QuotientPolynomialRing.normalize(p1_element)
 
-        return QuotientPolynomialRing(p1_element, poly1.pi_generator)
+        return QuotientPolynomialRing([float(c) for c in p1_element], poly1.pi_generator)
 
-    
     @staticmethod
-    def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> bool:
+    def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> None:
         if poly1.pi_generator != poly2.pi_generator:
             raise Exception("Polynomials have different quotienting polynomials.")
 
@@ -632,19 +655,19 @@ class QuotientPolynomialRing:
             Exception: If poly1 and poly2 have different pi_generators.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        
+
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
-        
+
         if len(p1_element) < len(p2_element):
             p1_element, p2_element = p2_element, p1_element
-        
+
         result_element = p1_element[:]
         for i in range(len(p2_element)):
             result_element[i] += p2_element[i]
-        
-        return QuotientPolynomialRing(result_element, poly1.pi_generator)
-    
+
+        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
+
     @staticmethod
     def Sub(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
@@ -661,19 +684,19 @@ class QuotientPolynomialRing:
             Exception: If poly1 and poly2 have different pi_generators.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        
+
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
-        
+
         if len(p1_element) < len(p2_element):
             p1_element, p2_element = p2_element, p1_element
-        
+
         result_element = p1_element[:]
         for i in range(len(p2_element)):
             result_element[i] -= p2_element[i]
-        
-        return QuotientPolynomialRing(result_element, poly1.pi_generator)
-    
+
+        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
+
     @staticmethod
     def Mul(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
@@ -690,37 +713,36 @@ class QuotientPolynomialRing:
             Exception: If poly1 and poly2 have different pi_generators.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        
+
         p1_element = poly1.element[:]
         p2_element = poly2.element[:]
-        
+
         result_degree = len(p1_element) + len(p2_element) - 1
-        result_element = [0] * result_degree
-        
+        result_element = [Fraction(0)] * result_degree
+
         for i in range(len(p1_element)):
             for j in range(len(p2_element)):
                 result_element[i + j] += p1_element[i] * p2_element[j]
-        
+
         while len(result_element) >= len(poly1.pi_generator):
             coeff = result_element.pop()
-            for i in range(len(poly1.pi_generator)-1):
+            for i in range(len(poly1.pi_generator) - 1):
                 result_element[-1-i] -= coeff * poly1.pi_generator[-2-i]
-        
-        return QuotientPolynomialRing(result_element, poly1.pi_generator)
+
+        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
 
     def pow(self, m: int) -> 'QuotientPolynomialRing':
         """
         Returns the polynomial raised to the power m modulo pi_generator.
 
-        Parameters:if p2_element[-1] == 0:
-            break  # Avoid division by zero
+        Parameters:
             m (int): The exponent.
 
         Returns:
             QuotientPolynomialRing: The polynomial raised to the power m modulo pi_generator.
         """
         result = QuotientPolynomialRing([1], self.pi_generator)
-        # use fast exponentiation
+        # Use fast exponentiation
         while m > 0:
             if m % 2 == 1:
                 result = QuotientPolynomialRing.Mul(result, self)
@@ -744,17 +766,16 @@ class QuotientPolynomialRing:
             Exception: If poly1 and poly2 have different pi_generators.
         """
         QuotientPolynomialRing._check_pi_generator(poly1, poly2)
-        
-        while poly2.element != [0]:
+
+        while poly2.element != [Fraction(0)]:
             poly1, poly2 = poly2, QuotientPolynomialRing._mod_polynomial(poly1, poly2)
-            poly2.element = [int(u*1000000)/1000000 for u in poly2.element]
-            gcd_poly2 = gcd(*poly2.element)
-            if gcd_poly2 != 1 and gcd_poly2 != 0:
-                poly2.element = [u // gcd_poly2 for u in poly2.element]
+            gcd_poly2 = gcd_no_limit(*poly2.element)
+            if gcd_poly2 != Fraction(1) and gcd_poly2 != Fraction(0):
+                poly2.element = [c / gcd_poly2 for c in poly2.element]
         
-        poly1.element += [0] * (len(poly1.pi_generator) - len(poly1.element) - 1)
-        return poly1
-    
+        poly1.element += [Fraction(0)] * (len(poly1.pi_generator) - len(poly1.element) - 1)
+        return QuotientPolynomialRing([float(c) for c in poly1.element], poly1.pi_generator)
+
     @staticmethod
     def Inv(poly: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
         """
@@ -769,65 +790,65 @@ class QuotientPolynomialRing:
         Raises:
             Exception: If poly is not invertible.
         """
-        if poly.element == [0]:
+        if poly.element == [Fraction(0)]:
             raise Exception("The polynomial is not invertible.")
         
         # Initialize variables for the extended Euclidean algorithm
         a, b = poly, QuotientPolynomialRing(poly.pi_generator, poly.pi_generator)
         s, t = QuotientPolynomialRing([1], poly.pi_generator), QuotientPolynomialRing([0], poly.pi_generator)
         
-        while b.element != [0]:
+        while b.element != [Fraction(0)]:
             q = QuotientPolynomialRing._mod_polynomial(a, b)
             a, b = b, QuotientPolynomialRing.Sub(s, QuotientPolynomialRing.Mul(q, t))
             s, t = t, s
         
         # Ensure the inverse exists and is normalized
-        if a.element != [1]:
+        if a.element != [Fraction(1)]:
             raise Exception("The polynomial is not invertible.")
         
         # Normalize the resulting inverse polynomial
         QuotientPolynomialRing.normalize(s.element)
-        s.element += [0] * (len(s.pi_generator) - len(s.element) - 1)
+        s.element += [Fraction(0)] * (len(s.pi_generator) - len(s.element) - 1)
         
-        return QuotientPolynomialRing(s.element, poly.pi_generator)
+        return QuotientPolynomialRing([float(c) for c in s.element], poly.pi_generator)
 
-def normalize(poly: list[int]):
-    while poly and poly[-1] == 0:
-        poly.pop()
-    if not poly:  # This handles the case where the polynomial is empty after normalization
-        poly.append(0)
+def gcd(a: Fraction, b: Fraction) -> Fraction:
+    while b != Fraction(0):
+        a, b = b, a % b
+    return a
 
-def poly_div(num: list[int], den: list[int]) -> tuple[list[int], list[int]]:
+def poly_div(num: List[Fraction], den: List[Fraction]) -> Tuple[List[Fraction], List[Fraction]]:
     num = num[:]
-    normalize(num)
+    QuotientPolynomialRing.normalize(num)
     den = den[:]
-    normalize(den)
+    QuotientPolynomialRing.normalize(den)
 
-    if den == [0]:  # Handle the case where the denominator is zero
+    if den == [Fraction(0)]:  # Handle the case where the denominator is zero
         raise Exception("Denominator polynomial cannot be zero")
 
     if len(num) >= len(den):
         shift = len(num) - len(den)
-        den = [0] * shift + den
+        den = [Fraction(0)] * shift + den
     else:
-        return [0], num
+        return [Fraction(0)], num
 
     quot = []
     divisor = den[-1]
-    if divisor == 0:
+    if divisor == Fraction(0):
         raise ValueError("Leading coefficient of the denominator cannot be zero")
 
     for i in range(shift + 1):
         mult = num[-1] / divisor
         quot = [mult] + quot
-        if mult != 0:
+        if mult != Fraction(0):
             d = [mult * u for u in den]
             num = [u - v for u, v in zip(num, d)]
         num.pop()
         den.pop(0)
 
-    normalize(num)
+    QuotientPolynomialRing.normalize(num)
     return quot, num
+
 
 def aks_test(n: int) -> bool:
     """
