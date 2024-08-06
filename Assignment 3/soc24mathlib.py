@@ -1,6 +1,6 @@
 import random
-from fractions import Fraction
-from typing import List, Tuple
+from fractions import *
+from typing import List, Tuple, Union, Optional
 
 def pair_gcd(a: int, b: int) -> int:
     """
@@ -92,7 +92,7 @@ def gcd(*args: int) -> int:
 
     return g
 
-def gcd_no_limit(*args: int) -> int:
+def gcd_no_limit(*args: Fraction) -> Fraction:
     """
     Returns the greatest common divisor of a list of integers.
 
@@ -103,16 +103,20 @@ def gcd_no_limit(*args: int) -> int:
         int: The greatest common divisor of the list of integers.
     """
     
-    if (len(args) == 0):
-        return 0
-    if (len(args) == 1):
-        return args[0]
-    if (len(args) == 2):
-        return pair_gcd(args[0], args[1])
+    def gcd_fraction(frac1: Fraction, frac2: Fraction) -> Fraction:
+        # Calculate the GCD of the numerators and LCM of the denominators
+        num_gcd = pair_gcd(frac1.numerator, frac2.numerator)
+        denom_lcm = (frac1.denominator * frac2.denominator) // pair_gcd(frac1.denominator, frac2.denominator)
+        return Fraction(num_gcd, denom_lcm)
 
-    g = pair_gcd(args[0], args[1])
-    for i in range(2, len(args)):
-        g = pair_gcd(g, args[i])
+    if not args:
+        raise ValueError("At least one fraction is required")
+    
+    # Initialize with the first fraction
+    g = args[0]
+
+    for frac in args[1:]:
+        g = gcd_fraction(g, frac)
 
     return g
 
@@ -580,7 +584,7 @@ def euler_phi(n: int) -> int:
     return phi
 
 class QuotientPolynomialRing:
-    def __init__(self, poly: List[int], pi_gen: List[int]) -> None:
+    def __init__(self, poly: List[Fraction], pi_gen: List[Fraction]) -> None:
         self.element = [Fraction(c) for c in poly]  # Convert coefficients to Fractions
         self.pi_generator = [Fraction(c) for c in pi_gen]  # Convert pi_generator to Fractions
         self._reduce()  # Reduce the polynomial
@@ -632,7 +636,7 @@ class QuotientPolynomialRing:
         # Normalize the resulting polynomial
         QuotientPolynomialRing.normalize(p1_element)
 
-        return QuotientPolynomialRing([float(c) for c in p1_element], poly1.pi_generator)
+        return QuotientPolynomialRing([Fraction(c) for c in p1_element], poly1.pi_generator)
 
     @staticmethod
     def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> None:
@@ -666,7 +670,7 @@ class QuotientPolynomialRing:
         for i in range(len(p2_element)):
             result_element[i] += p2_element[i]
 
-        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
+        return QuotientPolynomialRing([Fraction(c) for c in result_element], poly1.pi_generator)
 
     @staticmethod
     def Sub(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -695,7 +699,7 @@ class QuotientPolynomialRing:
         for i in range(len(p2_element)):
             result_element[i] -= p2_element[i]
 
-        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
+        return QuotientPolynomialRing([Fraction(c) for c in result_element], poly1.pi_generator)
 
     @staticmethod
     def Mul(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -729,7 +733,7 @@ class QuotientPolynomialRing:
             for i in range(len(poly1.pi_generator) - 1):
                 result_element[-1-i] -= coeff * poly1.pi_generator[-2-i]
 
-        return QuotientPolynomialRing([float(c) for c in result_element], poly1.pi_generator)
+        return QuotientPolynomialRing([Fraction(c) for c in result_element], poly1.pi_generator)
 
     def pow(self, m: int) -> 'QuotientPolynomialRing':
         """
@@ -741,7 +745,7 @@ class QuotientPolynomialRing:
         Returns:
             QuotientPolynomialRing: The polynomial raised to the power m modulo pi_generator.
         """
-        result = QuotientPolynomialRing([1], self.pi_generator)
+        result = QuotientPolynomialRing([Fraction(1)], self.pi_generator)
         # Use fast exponentiation
         while m > 0:
             if m % 2 == 1:
@@ -774,7 +778,7 @@ class QuotientPolynomialRing:
                 poly2.element = [c / gcd_poly2 for c in poly2.element]
         
         poly1.element += [Fraction(0)] * (len(poly1.pi_generator) - len(poly1.element) - 1)
-        return QuotientPolynomialRing([float(c) for c in poly1.element], poly1.pi_generator)
+        return QuotientPolynomialRing([Fraction(c) for c in poly1.element], poly1.pi_generator)
 
     @staticmethod
     def Inv(poly: 'QuotientPolynomialRing') -> 'QuotientPolynomialRing':
@@ -795,7 +799,7 @@ class QuotientPolynomialRing:
         
         # Initialize variables for the extended Euclidean algorithm
         a, b = poly, QuotientPolynomialRing(poly.pi_generator, poly.pi_generator)
-        s, t = QuotientPolynomialRing([1], poly.pi_generator), QuotientPolynomialRing([0], poly.pi_generator)
+        s, t = QuotientPolynomialRing([Fraction(1)], poly.pi_generator), QuotientPolynomialRing([Fraction(0)], poly.pi_generator)
         
         while b.element != [Fraction(0)]:
             q = QuotientPolynomialRing._mod_polynomial(a, b)
@@ -810,12 +814,7 @@ class QuotientPolynomialRing:
         QuotientPolynomialRing.normalize(s.element)
         s.element += [Fraction(0)] * (len(s.pi_generator) - len(s.element) - 1)
         
-        return QuotientPolynomialRing([float(c) for c in s.element], poly.pi_generator)
-
-def gcd(a: Fraction, b: Fraction) -> Fraction:
-    while b != Fraction(0):
-        a, b = b, a % b
-    return a
+        return QuotientPolynomialRing([Fraction(c) for c in s.element], poly.pi_generator)
 
 def poly_div(num: List[Fraction], den: List[Fraction]) -> Tuple[List[Fraction], List[Fraction]]:
     num = num[:]
@@ -832,7 +831,7 @@ def poly_div(num: List[Fraction], den: List[Fraction]) -> Tuple[List[Fraction], 
     else:
         return [Fraction(0)], num
 
-    quot = []
+    quot: List[Fraction] = []
     divisor = den[-1]
     if divisor == Fraction(0):
         raise ValueError("Leading coefficient of the denominator cannot be zero")
@@ -1066,7 +1065,7 @@ def jacobi_symbol(a: int, n: int) -> int:
         
         a, n = n, a
 
-    assert False        
+    # assert False        
 
 def modular_sqrt_prime(a: int, p: int) -> int:
     """
@@ -1081,7 +1080,7 @@ def modular_sqrt_prime(a: int, p: int) -> int:
     """
     a %= p
     if jacobi_symbol(a, p) != 1:
-        return None
+        return -1
     if p % 8 in (3, 7):
         pow(a, (p + 1) // 4, p)
     elif p % 8 == 5:
@@ -1107,7 +1106,9 @@ def modular_sqrt_prime(a: int, p: int) -> int:
     x = pow(a, (t + 1) // 2, p) * pow(dt, m // 2, p)
     return min(-x % p, x % p)
 
-def hensel_lift_2(a: int, e: int) -> tuple[int]:
+from typing import Tuple, Union
+
+def hensel_lift_2(a: int, e: int) -> Union[None, Tuple[int, ...]]:
     """
     Hensel root lifting for powers of two
 
@@ -1119,7 +1120,7 @@ def hensel_lift_2(a: int, e: int) -> tuple[int]:
         e (int): The power of two.
     
     Returns:
-        tuple[int]: The roots s such that s ** 2 == a mod (2 ** e).
+        Union[None, Tuple[int, ...]]: The roots s such that s ** 2 == a mod (2 ** e), or None if no roots exist.
     """
     if e == 1:
         return 1,
@@ -1159,7 +1160,7 @@ def hensel_lift(r: int, a:int, p: int, e: int) -> tuple[int]:
     t = p ** e
     return tuple(sorted((r % t, t - r % t)))
 
-def sqrt_mod_pn(a: int, p: int, n: int) -> tuple[tuple[int], int]:
+def sqrt_mod_pn(a: int, p: int, n: int) -> Tuple[Optional[Tuple[int, ...]], Optional[int]]:
     """
     Returns the square roots of a modulo p^n, if they exist.
 
@@ -1169,30 +1170,41 @@ def sqrt_mod_pn(a: int, p: int, n: int) -> tuple[tuple[int], int]:
         n (int): The power.
 
     Returns:
-        tuple[tuple[int], int]: The square roots of a modulo p^n, if they exist, and the exponent.
+        Tuple[Optional[Tuple[int, ...]], Optional[int]]:
+        The square roots of a modulo p^n, if they exist, and the exponent.
+        If no roots exist, returns (None, None).
     """
-    ret = None, None
+    ret: Tuple[Optional[Tuple[int, ...]], Optional[int]] = (None, None)
+    e: Optional[int] = None
+    
     if a % p:
         if p == 2:
-            ret = hensel_lift_2(a, n), n
+            roots, exponent = hensel_lift_2(a, n), n
+            ret = (roots, exponent)
         else:
-            r = modular_sqrt_prime(a, p)
-            if r:
-                ret = hensel_lift(r, a, p, n), n
+            r1: int
+            r1 = modular_sqrt_prime(a, p)
+            if r1:
+                roots, exponent = hensel_lift(r1, a, p, n), n
+                ret = (roots, exponent)
     else:
         if a % (p ** n) == 0:
-            ret = (0,), (n + 1) // 2
+            ret = ((0,), (n + 1) // 2)
         else:
             aa, m = a, 0
             while aa % p == 0:
                 aa, m = aa // p, m + 1
             if m % 2 == 0:
+                r: Optional[Tuple[int, ...]] = None
                 r, e = sqrt_mod_pn(aa, p, n - m)
-                if r:
-                    ret = tuple(x * p ** (m // 2) for x in r), e + m // 2
+                if r is not None and e is not None:
+                    roots = tuple(x * p ** (m // 2) for x in r)
+                    exponent = e + m // 2
+                    ret = (roots, exponent)
+                    
     return ret
-    
-def modular_sqrt_prime_power(x: int, p: int, e: int) -> int:
+
+def modular_sqrt_prime_power(x: int, p: int, e: int) -> Union[None, int]:
     """
     Returns the modular square root of x modulo p^e.
 
@@ -1204,7 +1216,12 @@ def modular_sqrt_prime_power(x: int, p: int, e: int) -> int:
     Returns:
         int: The modular square root of x modulo p^e.
     """
-    return sorted(sqrt_mod_pn(x, p, e)[0])[0]
+    roots: Optional[Tuple[int, ...]]
+    _: Optional[int]
+    roots, _ = sqrt_mod_pn(x, p, e)
+    if roots:
+        return min(roots)  # Return the smallest root
+    return None
 
 def itertools_product(*args):
     """
@@ -1222,7 +1239,7 @@ def itertools_product(*args):
         result = [x + [y] for x in result for y in pool]
     return result
 
-def sqrt_mod_m(a: int, m: int) -> tuple[int]:
+def sqrt_mod_m(a: int, m: int) -> Union[Tuple[()], Tuple[int, ...]]:
     """
     Returns the square roots of a modulo m.
 
@@ -1238,8 +1255,10 @@ def sqrt_mod_m(a: int, m: int) -> tuple[int]:
 
     rm, roots = 1, []
     for p, e in factor(m):
+        r: Optional[Tuple[int, ...]]
+        ee: Optional[int]
         r, ee = sqrt_mod_pn(a, p, e)
-        if r:
+        if r is not None and ee is not None:
             t = p ** ee
             rm *= t
             roots.append([(x, t) for x in r])
@@ -1247,12 +1266,12 @@ def sqrt_mod_m(a: int, m: int) -> tuple[int]:
             return ()
 
     if roots:
-        rx = [crt(*zip(*pr)) for pr in itertools_product(*roots)]
+        rx: List[int] = [crt(*[list(lst) for lst in zip(*pr)]) for pr in itertools_product(*roots)]
         return tuple(sorted(x + y for x in rx for y in range(0, m, rm)))
     else:
         return ()
 
-def modular_sqrt(x: int, n: int) -> int:
+def modular_sqrt(x: int, n: int) -> Union[Exception, int]:
     """
     Returns the modular square root of x modulo n.
 
@@ -1379,7 +1398,7 @@ def probabilistic_factor(n: int) -> list[tuple[int, int]]:
 
     factorize(n)
 
-    factor_counts = {}
+    factor_counts : dict[int, int] = {}
     for factor in factors:
         if factor in factor_counts:
             factor_counts[factor] += 1
