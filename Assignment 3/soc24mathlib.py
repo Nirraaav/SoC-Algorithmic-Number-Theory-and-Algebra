@@ -104,6 +104,16 @@ def gcd_no_limit(*args: Fraction) -> Fraction:
     """
     
     def gcd_fraction(frac1: Fraction, frac2: Fraction) -> Fraction:
+        """
+        Returns the greatest common divisor of two fractions.
+
+        Parameters:
+            frac1 (Fraction): The first fraction.
+            frac2 (Fraction): The second fraction.
+
+        Returns:
+            Fraction: The greatest common divisor of frac1 and frac2.
+        """
         # Calculate the GCD of the numerators and LCM of the denominators
         num_gcd = pair_gcd(frac1.numerator, frac2.numerator)
         denom_lcm = (frac1.denominator * frac2.denominator) // pair_gcd(frac1.denominator, frac2.denominator)
@@ -421,6 +431,17 @@ def is_perfect_power(x: int) -> bool:
     return False
 
 def is_prime(n, millerrabin = False, numoftests = 5):
+    """
+    Returns True if n is a prime number, and False otherwise.
+
+    Parameters:
+        n (int): The integer to be checked.
+        millerrabin (bool): Whether to use the Miller-Rabin primality test.
+        numoftests (int): The number of tests to be performed if using the Miller-Rabin primality test.
+
+    Returns:
+        bool: True if n is a prime number, and False otherwise
+    """
     if n == 1:
         return False
     if n == 2:
@@ -464,8 +485,16 @@ def is_prime(n, millerrabin = False, numoftests = 5):
         d //= 2
         r += 1
     #n = 2^r*d + 1
-    def is_composite(a):
-        #Finds out if a number is a composite one
+    def is_composite(a: int) -> bool:
+        """
+        Finds out if a number is a composite one
+
+        Parameters:
+            a (int): The base to be tested
+
+        Returns:
+            bool: True if n is composite, False otherwise
+        """
         if pow(a, d, n) == 1:
             return False
         for i in range(r):
@@ -511,7 +540,16 @@ def gen_k_bit_prime(k: int) -> int:
         if is_prime(p) and p >= pow_without_mod(2, k-1) and p < pow_without_mod(2, k):
             return p
         
-def primes(n): # sieve of eratosthenes
+def primes(n: int) -> list[int]: # sieve of eratosthenes
+    """
+    Returns a list of prime numbers up to n.
+
+    Parameters:
+        n (int): The upper bound.
+
+    Returns:
+        list[int]: A list of prime numbers up to n.
+    """
     i, p, ps, m = 0, 3, [2], n // 2
     sieve = [True] * m
     while p <= n:
@@ -585,11 +623,30 @@ def euler_phi(n: int) -> int:
 
 class QuotientPolynomialRing:
     def __init__(self, poly: List[Fraction], pi_gen: List[Fraction]) -> None:
+        """
+        Initializes a polynomial in the quotient polynomial ring.
+
+        Parameters:
+            poly (List[Fraction]): The coefficients of the polynomial.
+            pi_gen (List[Fraction]): The coefficients of the quotienting polynomial.
+
+        Returns:
+            None
+        """
         self.element = [Fraction(c) for c in poly]  # Convert coefficients to Fractions
         self.pi_generator = [Fraction(c) for c in pi_gen]  # Convert pi_generator to Fractions
         self._reduce()  # Reduce the polynomial
 
     def _reduce(self) -> None:
+        """
+        Reduces the polynomial modulo pi_generator.
+
+        Parameters:
+            None
+
+        Returns:
+            None
+        """
         while len(self.element) >= len(self.pi_generator):
             coeff = self.element[-1]
             for i in range(len(self.pi_generator) - 1):
@@ -598,6 +655,15 @@ class QuotientPolynomialRing:
 
     @staticmethod
     def normalize(poly: List[Fraction]) -> None:
+        """
+        Normalizes the polynomial by removing trailing zeros.
+
+        Parameters:
+            poly (List[Fraction]): The polynomial to be normalized.
+
+        Returns:
+            None
+        """
         while poly and poly[-1] == Fraction(0):
             poly.pop()
         if not poly:
@@ -640,6 +706,16 @@ class QuotientPolynomialRing:
 
     @staticmethod
     def _check_pi_generator(poly1: 'QuotientPolynomialRing', poly2: 'QuotientPolynomialRing') -> None:
+        """
+        Raises an exception if the polynomials have different pi_generators.
+
+        Parameters:
+            poly1 (QuotientPolynomialRing): The first polynomial.
+            poly2 (QuotientPolynomialRing): The second polynomial.
+
+        Returns:
+            None
+        """
         if poly1.pi_generator != poly2.pi_generator:
             raise Exception("Polynomials have different quotienting polynomials.")
 
@@ -817,6 +893,16 @@ class QuotientPolynomialRing:
         return QuotientPolynomialRing([Fraction(c) for c in s.element], poly.pi_generator)
 
 def poly_div(num: List[Fraction], den: List[Fraction]) -> Tuple[List[Fraction], List[Fraction]]:
+    """ 
+    Returns the quotient and remainder of the division of two polynomials.
+
+    Parameters:
+        num (List[Fraction]): The numerator polynomial.
+        den (List[Fraction]): The denominator polynomial.
+
+    Returns:
+        Tuple[List[Fraction], List[Fraction]]: The quotient and remainder of the division of the two
+    """
     num = num[:]
     QuotientPolynomialRing.normalize(num)
     den = den[:]
@@ -870,7 +956,10 @@ def aks_test(n: int) -> bool:
     if is_perfect_power(n):
         return False
 
-    def find_r(n):
+    def find_r(n: int) -> int:
+        """
+        Returns the smallest r such that r is coprime to n and n^r > n.
+        """
         mk = int(log_2(n) ** 2)
         r = mk
         while True:
@@ -895,14 +984,17 @@ def aks_test(n: int) -> bool:
     if n <= r:
         return True
     
-    def check(start, end, n):
+    def check(start, end, n) -> bool:
+        """
+        Returns True if the polynomial (x + a)^n = x^n + a (mod n) for all a in the range [start, end).
+        """
         for a in range(start, end):
             if pow(a, n, n) != a:
                 return False
         return True
     
     # max_a = int(((phi(r)) ** 0.5) * log_2(n))
-    max_a = floor_sqrt((phi(r)) * log_2(n))
+    max_a = floor_sqrt(phi(r)) * log_2(n)
     if max_a > n:
         max_a = n
     ran = max(1, max_a // 8)
@@ -1105,8 +1197,6 @@ def modular_sqrt_prime(a: int, p: int) -> int:
             m += pow_without_mod(2, i)
     x = pow(a, (t + 1) // 2, p) * pow(dt, m // 2, p)
     return min(-x % p, x % p)
-
-from typing import Tuple, Union
 
 def hensel_lift_2(a: int, e: int) -> Union[None, Tuple[int, ...]]:
     """
