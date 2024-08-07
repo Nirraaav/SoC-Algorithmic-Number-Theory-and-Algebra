@@ -959,6 +959,12 @@ def aks_test(n: int) -> bool:
     def find_r(n: int) -> int:
         """
         Returns the smallest r such that r is coprime to n and n^r > n.
+
+        Parameters:
+            n (int): The integer.
+
+        Returns:
+            int: The smallest r such that r is coprime to n and n^r > n.
         """
         mk = int(log_2(n) ** 2)
         r = mk
@@ -987,6 +993,14 @@ def aks_test(n: int) -> bool:
     def check(start, end, n) -> bool:
         """
         Returns True if the polynomial (x + a)^n = x^n + a (mod n) for all a in the range [start, end).
+
+        Parameters:
+            start (int): The start of the range.
+            end (int): The end of the range.
+            n (int): The integer.
+
+        Returns:
+            bool: True if the polynomial (x + a)^n = x^n + a (mod n) for all a in the range [start, end).
         """
         for a in range(start, end):
             if pow(a, n, n) != a:
