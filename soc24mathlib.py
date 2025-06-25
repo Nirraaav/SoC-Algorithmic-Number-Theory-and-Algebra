@@ -477,7 +477,8 @@ def is_prime(n, millerrabin = False, numoftests = 5):
     else:
         #If we want to use miller rabin test it finds random integers in the correct range as bases
         numoftests %= n
-        tests = [x for x in range(2, 2 + numoftests)]
+        # tests = [x for x in range(2, 2 + numoftests)]
+        tests = [random.randint(2, n - 2) for _ in range(numoftests)]
     d = n - 1
     r = 0
     while d % 2 == 0:

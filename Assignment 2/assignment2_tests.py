@@ -1,11 +1,45 @@
 import soc24mathlib
+# import time
+
+# counter = 0
+
+# def tassert(condition):
+#     print(condition)
+#     global counter
+#     start_time = time.time()
+#     try:
+#         assert condition
+#     except AssertionError:
+#         print("AssertionError")
+#     finally:
+#         end_time = time.time()
+#         time_in_ms = (end_time - start_time) * 1000
+#         print(f"Condition: {condition}, Time: {time_in_ms} ms, counter: {counter}")
+#         counter += 1
+
 import time
+import inspect
+import ast
 
 counter = 0
 
 def tassert(condition):
-    print(condition)
     global counter
+    # Get the line of the caller
+    frame = inspect.currentframe().f_back
+    line = inspect.getframeinfo(frame).code_context[0].strip()
+
+    # Parse the line and extract the argument to tassert
+    try:
+        parsed = ast.parse(line)
+        call_node = parsed.body[0].value  # Assume it's an Expr(tassert(...))
+        if isinstance(call_node, ast.Call) and hasattr(call_node, "args"):
+            condition_expr = ast.unparse(call_node.args[0])
+        else:
+            condition_expr = "Unknown"
+    except Exception as e:
+        condition_expr = "Unknown"
+
     start_time = time.time()
     try:
         assert condition
@@ -14,7 +48,7 @@ def tassert(condition):
     finally:
         end_time = time.time()
         time_in_ms = (end_time - start_time) * 1000
-        print(f"Condition: {condition}, Time: {time_in_ms} ms, counter: {counter}")
+        print(f"Condition: {condition_expr}, Time: {time_in_ms:.3f} ms, Counter: {counter}")
         counter += 1
 
 tassert(soc24mathlib.floor_sqrt(64) == 8)
