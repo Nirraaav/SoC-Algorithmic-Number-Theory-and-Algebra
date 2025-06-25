@@ -475,17 +475,16 @@ def is_prime(n, millerrabin = False, numoftests = 5):
         else:
             tests = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59]
     else:
-        #If we want to use miller rabin test it finds random integers in the correct range as bases
+        # If we want to use miller rabin test it finds random integers in the correct range as bases
         numoftests %= n
-        # tests = [x for x in range(2, 2 + numoftests)]
         tests = [random.randint(2, n - 2) for _ in range(numoftests)]
     d = n - 1
     r = 0
     while d % 2 == 0:
-        #Divide 2 until no longer divisible
+        # Divide 2 until no longer divisible
         d //= 2
         r += 1
-    #n = 2^r*d + 1
+    # n = 2^r*d + 1
     def is_composite(a: int) -> bool:
         """
         Finds out if a number is a composite one
