@@ -1,9 +1,12 @@
 import soc24mathlib
 import random
+import time
+
+start = time.time()
 
 for i in range(1000000):
     if i % 2 == 0:
-        p = soc24mathlib.gen_prime(1000000000)
+        p = soc24mathlib.gen_k_bit_prime(50)
         # print(p)
         assert(soc24mathlib.aks_test(p) == True)
     else:
@@ -12,4 +15,7 @@ for i in range(1000000):
         # print(p)
     if i % 100 == 0:
         print(i)
+        end = time.time()
+        print("Time taken for last 100 iterations: ", end - start)
+        start = time.time()
     
